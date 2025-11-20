@@ -334,12 +334,41 @@
             opacity: 1;
             cursor: pointer;
             animation: city-pulse 2s ease-in-out infinite;
+            transition: opacity 0.4s ease, filter 0.5s ease, transform 0.5s ease;
         }
 
         .city-dot:hover {
             fill: #ff6b35;
             opacity: 1;
             r: 6;
+        }
+
+        .cities.faded .city-dot {
+            opacity: 0.05;
+            filter: blur(0.6px) brightness(0.8);
+            transform: translateY(1px) scale(0.99);
+        }
+
+        /* Fully hide map dots while they "move" into the letter */
+        .cities.vanished .city-dot {
+            opacity: 0;
+            filter: blur(1.5px) brightness(0.5);
+            transform: translateY(-10px) scale(0.7);
+        }
+
+        .cities.hide-map .city-dot {
+            display: none;
+        }
+
+        /* Trim GPU-heavy effects when many dots are on-screen */
+        #map-container.dense-mode .city-dot {
+            animation: none;
+            filter: none;
+            opacity: 0.95;
+        }
+
+        #map-container.dense-mode .city-dot:hover {
+            filter: drop-shadow(0 0 6px rgba(255, 107, 53, 0.9));
         }
 
         @keyframes city-pulse {
@@ -368,13 +397,7 @@
         }
 
         .zoom-controls {
-            position: absolute;
-            bottom: 30px;
-            right: 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 10;
+            display: none;
         }
 
         .zoom-btn {
@@ -558,6 +581,7 @@
             '57': 'municipality'
         };
         const ALPHABET_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const CITY_DENSE_THRESHOLD = 100;
 
         // ==========================================
         // US CITIES DATA (Curated from Census Gazetteer)
@@ -567,6 +591,7 @@
         let cityStore = null;
         let citiesGroup = null;
         let citiesByLetter = {};
+        let letterAnimationBuckets = {};
         let currentFilter = null;
 
         // Embedded Census data (19,470 incorporated places)
@@ -859,6 +884,39 @@
             });
         }
 
+        function rebuildLetterAnimationBuckets(maxParticles = performanceState.letterMaxParticles) {
+            letterAnimationBuckets = {};
+            const selectionOptions = getLetterSelectionOptions(maxParticles);
+            ALPHABET_LETTERS.forEach(letter => {
+                const indexes = citiesByLetter[letter] || [];
+                letterAnimationBuckets[letter] = selectIndexesForLetter(indexes, selectionOptions);
+            });
+        }
+
+        function refreshLetterBucket(letter) {
+            if (!letter || letter === "ALL" || letter === "CLEAR") {
+                return;
+            }
+            const indexes = citiesByLetter[letter] || [];
+            letterAnimationBuckets[letter] = selectIndexesForLetter(indexes, getLetterSelectionOptions());
+        }
+
+        function applyPerformanceMode(cityCount = 0, letter = null) {
+            const denseActive = cityCount >= CITY_DENSE_THRESHOLD;
+            const nextCap = denseActive ? DENSE_LETTER_PARTICLE_CAP : MAX_LETTER_PARTICLES;
+            const capChanged = nextCap !== performanceState.letterMaxParticles;
+
+            performanceState.denseMap = denseActive;
+            performanceState.letterMaxParticles = nextCap;
+            svg.classed("dense-mode", denseActive);
+
+            if (letter && letter !== "ALL" && letter !== "CLEAR") {
+                refreshLetterBucket(letter);
+            } else if (capChanged) {
+                rebuildLetterAnimationBuckets(performanceState.letterMaxParticles);
+            }
+        }
+
         function setupCityListVirtualization() {
             cityListVirtualSpacer = cityList.append("div")
                 .attr("id", "city-list-virtual-spacer");
@@ -949,7 +1007,8 @@
         // ZOOM BEHAVIOR
         // ==========================================
         const zoom = d3.zoom()
-            .scaleExtent([1, 8])
+            .filter(() => false)
+            .scaleExtent([1, 1])
             .on("zoom", (event) => {
                 g.attr("transform", event.transform);
             })
@@ -973,13 +1032,6 @@
         function createAlphabetFilter() {
             const alphabet = ALPHABET_LETTERS;
             const filterContainer = d3.select("#alphabet-filter");
-
-            // Add ALL button
-            filterContainer.append("button")
-                .attr("class", "letter-btn control-btn")
-                .attr("data-letter", "ALL")
-                .text("ALL")
-                .on("click", () => filterCities("ALL"));
 
             // Add letter buttons
             alphabet.forEach(letter => {
@@ -1019,6 +1071,7 @@
                 currentFilter = null;
                 renderCities([]);
                 updateInfoPanel(null);
+                applyPerformanceMode(0, null);
                 return;
             }
 
@@ -1035,6 +1088,9 @@
                 d3.select(`[data-letter="${letter}"]`).classed("active", true);
                 updateInfoPanel(letter, citiesToShow.length);
             }
+
+            const cityCount = Array.isArray(citiesToShow) ? citiesToShow.length : 0;
+            applyPerformanceMode(cityCount, letter);
 
             console.log(`Rendering ${citiesToShow.length} cities for letter "${letter}"...`);
             renderCities(citiesToShow);
@@ -1113,6 +1169,7 @@
             cityStore = processed.store;
             citiesByLetter = processed.letterBuckets;
             usCitiesData = processed.allIndexes;
+            rebuildLetterAnimationBuckets();
 
             // Create alphabet filter
             createAlphabetFilter();
@@ -1166,11 +1223,35 @@
         const LETTER_UPPERCASE_THRESHOLD = 1.02;
         const UPPERCASE_STAGE_SCALE = 0.9;
         const LOWERCASE_STAGE_SCALE = 0.78;
-        const MAX_LETTER_PARTICLES = 4800;
-        const MIN_LETTER_PARTICLES = 1400;
-        const LETTER_PARTICLE_DOWNSCALE_RATIO = 0.58;
+        const LOWERCASE_STAGE_X_SHIFT_RATIO = 0.085;
+        const MAX_LETTER_PARTICLES = 2000;
+        const DENSE_LETTER_PARTICLE_CAP = 1400;
+        const DENSE_LETTER_MIN_PARTICLES = 650;
+        const DENSE_LETTER_DOWNSCALE_RATIO = 0.3;
+        const MIN_LETTER_PARTICLES = 900;
+        const LETTER_PARTICLE_DOWNSCALE_RATIO = 0.38;
         const LETTER_SHAPE_CACHE = new Map();
-        const DOT_TEXTURE_SIZE = 96;
+        const DOT_TEXTURE_SIZE = 72;
+        const performanceState = {
+            denseMap: false,
+            letterMaxParticles: MAX_LETTER_PARTICLES
+        };
+
+        function getLetterSelectionOptions(overrideMax) {
+            const maxParticles = overrideMax ?? performanceState.letterMaxParticles;
+            if (performanceState.denseMap) {
+                return {
+                    maxParticles,
+                    minParticles: DENSE_LETTER_MIN_PARTICLES,
+                    downscaleRatio: DENSE_LETTER_DOWNSCALE_RATIO
+                };
+            }
+            return {
+                maxParticles,
+                minParticles: MIN_LETTER_PARTICLES,
+                downscaleRatio: LETTER_PARTICLE_DOWNSCALE_RATIO
+            };
+        }
 
         let formMode = false;
         let currentFormLetter = null;
@@ -1199,25 +1280,32 @@
         // Letter shape generator - creates dot patterns for each letter
         const LOWERCASE_FONT_SCALE = 0.72;
         const LOWERCASE_BASELINE_OFFSET = 50;
-        function selectIndexesForLetter(indexes = []) {
+        function selectIndexesForLetter(indexes = [], options = {}) {
             const total = indexes.length;
-            if (total <= MIN_LETTER_PARTICLES) {
+            if (!total) {
+                return [];
+            }
+
+            const minParticles = options.minParticles ?? MIN_LETTER_PARTICLES;
+            const maxParticles = options.maxParticles ?? performanceState.letterMaxParticles ?? MAX_LETTER_PARTICLES;
+            const downscaleRatio = options.downscaleRatio ?? LETTER_PARTICLE_DOWNSCALE_RATIO;
+
+            if (total <= minParticles) {
                 return indexes.slice();
             }
 
-            const ratioCount = Math.floor(total * LETTER_PARTICLE_DOWNSCALE_RATIO);
-            const target = Math.max(MIN_LETTER_PARTICLES, Math.min(MAX_LETTER_PARTICLES, ratioCount));
+            const ratioCount = Math.max(minParticles, Math.floor(total * downscaleRatio) || total);
+            const target = Math.max(minParticles, Math.min(maxParticles, ratioCount));
 
             if (total <= target) {
                 return indexes.slice();
             }
 
-            const selected = indexes.slice(0, target);
-            for (let i = target; i < total; i++) {
-                const j = Math.floor(Math.random() * (i + 1));
-                if (j < target) {
-                    selected[j] = indexes[i];
-                }
+            const step = total / target;
+            const selected = new Array(target);
+            for (let i = 0; i < target; i++) {
+                const sourceIndex = Math.min(total - 1, Math.floor(i * step + step * 0.5));
+                selected[i] = indexes[sourceIndex];
             }
             return selected;
         }
@@ -1358,6 +1446,9 @@
 
                 mouseX = nextX;
                 mouseY = nextY;
+                if (formMode) {
+                    startLetterAnimation();
+                }
             });
 
             letterCanvas.addEventListener('mouseleave', () => {
@@ -1382,9 +1473,9 @@
             const center = DOT_TEXTURE_SIZE / 2;
             const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
 
-            gradient.addColorStop(0, 'rgba(255,107,53,0.95)');
-            gradient.addColorStop(0.45, 'rgba(255,107,53,0.65)');
-            gradient.addColorStop(0.75, 'rgba(255,107,53,0.15)');
+            gradient.addColorStop(0, 'rgba(255,107,53,1)');
+            gradient.addColorStop(0.28, 'rgba(255,107,53,0.9)');
+            gradient.addColorStop(0.55, 'rgba(255,107,53,0.45)');
             gradient.addColorStop(1, 'rgba(255,107,53,0)');
 
             ctx.fillStyle = gradient;
@@ -1436,6 +1527,8 @@
                     p.targetY = p.letterY;
                 }
             });
+
+            startLetterAnimation();
         }
 
         function handleLetterZoom(event) {
@@ -1459,6 +1552,8 @@
             } else if (letterZoomScale <= LETTER_UPPERCASE_THRESHOLD) {
                 setLetterCase('uppercase');
             }
+
+            startLetterAnimation();
         }
 
         function buildParticlesForLetter(letter) {
@@ -1471,7 +1566,15 @@
                 return [];
             }
 
-            const indexes = selectIndexesForLetter(rawIndexes);
+            const selectionOptions = getLetterSelectionOptions();
+            const precomputed = letterAnimationBuckets[letter];
+            const initialIndexes = (precomputed && precomputed.length)
+                ? precomputed
+                : selectIndexesForLetter(rawIndexes, selectionOptions);
+
+            const indexes = (initialIndexes.length > selectionOptions.maxParticles)
+                ? selectIndexesForLetter(initialIndexes, selectionOptions)
+                : initialIndexes;
 
             const shapeVariants = buildLetterShapeVariants(letter, indexes.length);
             if (!shapeVariants.uppercase.points.length) {
@@ -1484,6 +1587,9 @@
                 let offsetX = stage.offsetX;
                 if (typeof options.alignToScale === 'number') {
                     offsetX += stage.width * (options.alignToScale - scaleFactor) / 2;
+                }
+                if (typeof options.offsetX === 'number') {
+                    offsetX += options.offsetX;
                 }
 
                 return {
@@ -1519,7 +1625,8 @@
 
                 const uppercaseCoords = mapToStage(upperPos, UPPERCASE_STAGE_SCALE);
                 const lowercaseCoords = mapToStage(lowerPos, LOWERCASE_STAGE_SCALE, {
-                    alignToScale: UPPERCASE_STAGE_SCALE
+                    alignToScale: UPPERCASE_STAGE_SCALE,
+                    offsetX: stage.width * LOWERCASE_STAGE_X_SHIFT_RATIO
                 });
 
                 const driftX = stage.offsetX + stage.width * (0.05 + Math.random() * 0.25);
@@ -1598,7 +1705,7 @@
             d3.select('#map-container').classed('split-view', true);
             d3.select('#form-btn').text('BACK TO MAP');
 
-            citiesGroup.selectAll("circle").transition().duration(400).style("opacity", 0.05);
+            citiesGroup.classed("faded", true).classed("vanished", true).classed("hide-map", true);
 
             startLetterSequence();
         }
@@ -1633,7 +1740,7 @@
 
             const waitForParticlesThenZoom = () => {
                 waitForParticlesAtHome(() => {
-                    citiesGroup.selectAll("circle").transition().duration(320).style("opacity", 1);
+                    citiesGroup.classed("faded", false).classed("vanished", false).classed("hide-map", false);
                     startZoomHome();
                 });
             };
@@ -1655,6 +1762,7 @@
                     p.vy = 0;
                     p.delay = 0;
                 });
+                startLetterAnimation();
             }
 
             waitForParticlesThenZoom();
@@ -1674,14 +1782,26 @@
 
                 letterCtx.clearRect(0, 0, letterCanvas.width, letterCanvas.height);
 
+                let hasActiveParticles = false;
                 for (let i = 0; i < letterParticles.length; i++) {
                     const particle = letterParticles[i];
-                    updateParticle(particle);
+                    if (!particle) {
+                        continue;
+                    }
+                    const active = updateParticle(particle);
+                    if (active) {
+                        hasActiveParticles = true;
+                    }
                     drawParticle(particle);
                 }
 
                 mouseVX *= 0.9;
                 mouseVY *= 0.9;
+
+                if (!hasActiveParticles && Math.abs(mouseVX) < 0.02 && Math.abs(mouseVY) < 0.02) {
+                    animationFrameId = null;
+                    return;
+                }
 
                 animationFrameId = requestAnimationFrame(animate);
             };
@@ -1714,9 +1834,13 @@
         }
 
         function updateParticle(p) {
+            if (!p) {
+                return false;
+            }
+
             if (p.delay > 0) {
                 p.delay -= 1;
-                return;
+                return true;
             }
 
             const dx = p.targetX - p.x;
@@ -1758,6 +1882,17 @@
             } else if (p.stage === 'return' && dist < 1.5) {
                 p.stage = 'home';
             }
+
+            const targetDx = p.targetX - p.x;
+            const targetDy = p.targetY - p.y;
+            const targetDist = Math.sqrt(targetDx * targetDx + targetDy * targetDy);
+
+            const velocityMagnitude = Math.abs(p.vx) + Math.abs(p.vy);
+            const isActive = p.stage !== 'form'
+                || targetDist > 0.9
+                || velocityMagnitude > 0.065;
+
+            return isActive;
         }
 
         function applyCursorForces(p) {
@@ -1813,28 +1948,18 @@
             }
 
             const rippleBoost = 1 + p.ripple * 0.45;
-            const coreRadius = (p.size + p.ripple * 1.4) * rippleBoost;
-            const glowRadius = coreRadius * 1.65;
+            const spriteRadius = (p.size + p.ripple * 1.1) * rippleBoost * 1.5;
+            const spriteSize = spriteRadius * 2;
 
             if (letterDotTexture) {
-                const glowSize = glowRadius * 2;
-                const coreSize = coreRadius * 2;
-
-                letterCtx.globalAlpha = 0.38;
-                letterCtx.drawImage(letterDotTexture, px - glowSize / 2, py - glowSize / 2, glowSize, glowSize);
-                letterCtx.globalAlpha = 0.98;
-                letterCtx.drawImage(letterDotTexture, px - coreSize / 2, py - coreSize / 2, coreSize, coreSize);
+                letterCtx.globalAlpha = 0.9;
+                letterCtx.drawImage(letterDotTexture, px - spriteSize / 2, py - spriteSize / 2, spriteSize, spriteSize);
                 letterCtx.globalAlpha = 1;
             } else {
-                letterCtx.globalAlpha = 0.25;
+                letterCtx.globalAlpha = 0.9;
                 letterCtx.fillStyle = ORANGE_COLOR;
                 letterCtx.beginPath();
-                letterCtx.arc(px, py, glowRadius, 0, Math.PI * 2);
-                letterCtx.fill();
-
-                letterCtx.globalAlpha = 0.95;
-                letterCtx.beginPath();
-                letterCtx.arc(px, py, coreRadius, 0, Math.PI * 2);
+                letterCtx.arc(px, py, spriteRadius, 0, Math.PI * 2);
                 letterCtx.fill();
                 letterCtx.globalAlpha = 1;
             }
