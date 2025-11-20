@@ -46,8 +46,8 @@
         }
 
         #title img {
-            max-width: 210px;
-            width: 34%;
+            max-width: 320px;
+            width: 48%;
             height: auto;
             display: block;
             margin: 0 auto;
@@ -110,7 +110,7 @@
 
         .letter-count {
             position: absolute;
-            bottom: -22px;
+            bottom: -26px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(255, 107, 53, 0.95);
@@ -132,7 +132,7 @@
         .letter-count::before {
             content: '';
             position: absolute;
-            top: -4px;
+            top: -6px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
@@ -142,13 +142,10 @@
             border-bottom: 4px solid rgba(255, 107, 53, 0.95);
         }
 
-        .letter-btn:hover .letter-count {
-            opacity: 1;
-            bottom: -24px;
-        }
-
+        .letter-btn:hover .letter-count,
         .letter-btn.active .letter-count {
             opacity: 1;
+            bottom: -22px;
         }
 
         .control-btn {
@@ -316,7 +313,8 @@
 
         #map-container {
             width: 100%;
-            height: 100%;
+            height: calc(100% - 70px);
+            margin-top: 70px;
             cursor: grab;
             transition: transform 0.85s cubic-bezier(0.4, 0, 0.2, 1), filter 0.6s ease;
             transform-origin: center center;
@@ -1210,6 +1208,11 @@
                 renderCities([]);
                 updateInfoPanel(null);
                 applyPerformanceMode(0, null);
+                d3.select('#fav-panel').classed('visible', false);
+                if (favoritesLayer) {
+                    favoritesLayer.selectAll('.favorite-marker').remove();
+                    favoriteActiveId = null;
+                }
                 return;
             }
 
@@ -1225,6 +1228,13 @@
                 citiesToShow = citiesByLetter[letter] || [];
                 d3.select(`[data-letter="${letter}"]`).classed("active", true);
                 updateInfoPanel(letter, citiesToShow.length);
+            }
+
+            // Hide favorites panel when a letter is selected
+            d3.select('#fav-panel').classed('visible', false);
+            if (favoritesLayer) {
+                favoritesLayer.selectAll('.favorite-marker').remove();
+                favoriteActiveId = null;
             }
 
             const cityCount = Array.isArray(citiesToShow) ? citiesToShow.length : 0;
@@ -1347,6 +1357,7 @@
         const LETTER_STAGE_WIDTH_RATIO = 0.45;
         const LETTER_STAGE_MARGIN_RATIO = 0.05;
         const LETTER_STAGE_HEIGHT_RATIO = 0.78;
+        const LETTER_STAGE_Y_OFFSET = 60;
         const LETTER_ZOOM_MIN_SCALE = 0.85;
         const LETTER_ZOOM_MAX_SCALE = 1.45;
         const LETTER_LOWERCASE_THRESHOLD = 1.12;
@@ -1408,7 +1419,7 @@
             letterStageBounds.width = window.innerWidth * LETTER_STAGE_WIDTH_RATIO;
             letterStageBounds.height = window.innerHeight * LETTER_STAGE_HEIGHT_RATIO;
             letterStageBounds.offsetX = window.innerWidth * LETTER_STAGE_MARGIN_RATIO;
-            letterStageBounds.offsetY = (window.innerHeight - letterStageBounds.height) / 2;
+            letterStageBounds.offsetY = (window.innerHeight - letterStageBounds.height) / 2 + LETTER_STAGE_Y_OFFSET;
         }
 
         // Letter shape generator - creates dot patterns for each letter
@@ -1795,16 +1806,6 @@
                     state: cityStore.states[idx],
                     pop: cityStore.populations[idx] || 0
                 }));
-
-                // glow rings
-                favoritesLayer.selectAll('.favorite-marker-glow')
-                    .data(data)
-                    .enter()
-                    .append('circle')
-                    .attr('class', 'favorite-marker glow')
-                    .attr('r', 14)
-                    .attr('cx', d => d.cx)
-                    .attr('cy', d => d.cy);
 
                 // core markers with tooltip
                 favoritesLayer.selectAll('.favorite-marker')
