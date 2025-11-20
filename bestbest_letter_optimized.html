@@ -33,24 +33,25 @@
             top: 0;
             left: 0;
             right: 0;
-            z-index: 20;
+            z-index: 60;
             background: transparent;
-            padding: 15px 20px 195px 20px;
-            pointer-events: none;
+            padding: 0 20px 175px 20px;
+            pointer-events: auto;
         }
 
         #title {
             text-align: center;
-            margin-bottom: 20px;
+            margin: 14px 0 18px 0;
             pointer-events: auto;
         }
 
         #title img {
-            max-width: 250px;
-            width: 40%;
+            max-width: 210px;
+            width: 34%;
             height: auto;
             display: block;
             margin: 0 auto;
+            padding-top: 4px;
         }
 
         #alphabet-filter {
@@ -59,15 +60,16 @@
             gap: 4px;
             flex-wrap: nowrap;
             max-width: 100%;
-            margin: 15px auto 0 auto;
+            margin: 24px auto 0 auto;
             overflow-x: auto;
-            padding: 0 10px 30px 10px;
+            padding: 12px 10px 26px 10px;
             pointer-events: auto;
+            align-items: flex-start;
         }
 
         .letter-btn {
             width: 38px;
-            height: 38px;
+            height: 42px;
             flex-shrink: 0;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.15);
@@ -96,7 +98,7 @@
             border-color: #ff6b35;
             color: #fff;
             box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
-            transform: scale(1.1);
+            transform: translateY(2px) scale(1.08);
         }
 
         .letter-btn.disabled {
@@ -316,6 +318,7 @@
             cursor: grab;
             transition: transform 0.85s cubic-bezier(0.4, 0, 0.2, 1), filter 0.6s ease;
             transform-origin: center center;
+            touch-action: none; /* enable pinch/scroll zoom without browser interfering */
         }
 
         #map-container.grabbing {
@@ -396,31 +399,7 @@
             opacity: 0.9;
         }
 
-        .zoom-controls {
-            display: none;
-        }
-
-        .zoom-btn {
-            width: 40px;
-            height: 40px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            font-size: 20px;
-            cursor: pointer;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            backdrop-filter: blur(10px);
-        }
-
-        .zoom-btn:hover {
-            background: rgba(255, 107, 53, 0.8);
-            border-color: #ff6b35;
-            transform: scale(1.1);
-        }
+        /* zoom controls removed */
 
         .loading {
             position: absolute;
@@ -450,6 +429,50 @@
         .tooltip.visible {
             opacity: 1;
         }
+
+        .form-help-toast {
+            position: absolute;
+            left: 50%;
+            bottom: 120px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            font-size: 13px;
+            letter-spacing: 0.2px;
+            opacity: 0;
+            pointer-events: auto;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            z-index: 120;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-help-toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(6px);
+        }
+
+        .form-help-dismiss {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 12px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+        }
     
         #form-btn {
             position: fixed;
@@ -463,11 +486,12 @@
             padding: 12px 24px;
             border-radius: 8px;
             cursor: pointer;
-            z-index: 100;
+            z-index: 200;
             opacity: 0;
             pointer-events: none;
             transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+            white-space: nowrap;
         }
 
         #form-btn.visible {
@@ -550,16 +574,11 @@
             </div>
         </div>
 
-        <div class="zoom-controls">
-            <button class="zoom-btn" id="zoom-in">+</button>
-            <button class="zoom-btn" id="zoom-out">−</button>
-            <button class="zoom-btn" id="zoom-reset">⟲</button>
-        </div>
-
         <div class="tooltip"></div>
         <div class="loading" id="loading">Loading cities data...</div>
+        <div id="form-help-toast" class="form-help-toast"></div>
     
-        <button id="form-btn">FORM LETTER</button>
+        <button id="form-btn" aria-live="polite">FORM LETTER</button>
         <div id="letter-formation">
             <canvas id="letter-canvas"></canvas>
         </div>
@@ -1007,9 +1026,14 @@
         // ZOOM BEHAVIOR
         // ==========================================
         const zoom = d3.zoom()
-            .filter(() => false)
-            .scaleExtent([1, 1])
+            .filter((event) => {
+                // Disable zoom while in letter form mode
+                if (formMode) return false;
+                return true;
+            })
+            .scaleExtent([0.8, 8])
             .on("zoom", (event) => {
+                if (formMode) return;
                 g.attr("transform", event.transform);
             })
             .on("start", () => {
@@ -1030,8 +1054,8 @@
         // ALPHABET FILTER UI
         // ==========================================
         function createAlphabetFilter() {
-            const alphabet = ALPHABET_LETTERS;
-            const filterContainer = d3.select("#alphabet-filter");
+        const alphabet = ALPHABET_LETTERS;
+        const filterContainer = d3.select("#alphabet-filter");
 
             // Add letter buttons
             alphabet.forEach(letter => {
@@ -1052,13 +1076,13 @@
                 }
             });
 
-            // Add CLEAR button
-            filterContainer.append("button")
-                .attr("class", "letter-btn control-btn")
-                .attr("data-letter", "CLEAR")
-                .text("CLEAR")
-                .on("click", () => filterCities("CLEAR"));
-        }
+    // Add CLEAR button
+    filterContainer.append("button")
+        .attr("class", "letter-btn control-btn")
+        .attr("data-letter", "CLEAR")
+        .text("CLEAR")
+        .on("click", () => filterCities("CLEAR"));
+}
 
         // ==========================================
         // FILTER FUNCTION
@@ -1193,21 +1217,6 @@
         }
 
         // ==========================================
-        // ZOOM CONTROLS
-        // ==========================================
-        d3.select("#zoom-in").on("click", function() {
-            svg.transition().duration(300).call(zoom.scaleBy, 1.5);
-        });
-
-        d3.select("#zoom-out").on("click", function() {
-            svg.transition().duration(300).call(zoom.scaleBy, 0.67);
-        });
-
-        d3.select("#zoom-reset").on("click", function() {
-            svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
-        });
-
-        // ==========================================
         // INITIALIZE
         // ==========================================
 
@@ -1232,6 +1241,7 @@
         const LETTER_PARTICLE_DOWNSCALE_RATIO = 0.38;
         const LETTER_SHAPE_CACHE = new Map();
         const DOT_TEXTURE_SIZE = 72;
+        const formHelpMessage = 'Try to Hover On and Zoom-In & Zoom-Out on Letter';
         const performanceState = {
             denseMap: false,
             letterMaxParticles: MAX_LETTER_PARTICLES
@@ -1269,6 +1279,8 @@
         let letterZoomScale = 1;
         let letterCaseMode = 'uppercase';
         let letterDotTexture = null;
+        let letterHelpShown = false;
+        let formHelpToastTimeout = null;
 
         function updateLetterStageBounds() {
             letterStageBounds.width = window.innerWidth * LETTER_STAGE_WIDTH_RATIO;
@@ -1459,6 +1471,29 @@
             });
 
             letterCanvas.addEventListener('wheel', handleLetterZoom, { passive: false });
+        }
+
+        function showFormHelpToast() {
+            const toast = d3.select('#form-help-toast');
+            if (!toast.node()) return;
+            toast.html(`<span>${formHelpMessage}</span><button class="form-help-dismiss" type="button" aria-label="Dismiss">×</button>`).classed('visible', true);
+            toast.select('.form-help-dismiss').on('click', () => {
+                hideFormHelpToast();
+            });
+
+            if (formHelpToastTimeout) {
+                clearTimeout(formHelpToastTimeout);
+                formHelpToastTimeout = null;
+            }
+        }
+
+        function hideFormHelpToast() {
+            const toast = d3.select('#form-help-toast');
+            toast.classed('visible', false);
+            if (formHelpToastTimeout) {
+                clearTimeout(formHelpToastTimeout);
+                formHelpToastTimeout = null;
+            }
         }
 
         function createLetterDotTexture() {
@@ -1704,6 +1739,14 @@
             d3.select('#container').classed('in-form-mode', true);
             d3.select('#map-container').classed('split-view', true);
             d3.select('#form-btn').text('BACK TO MAP');
+            if (!letterHelpShown) {
+                showFormHelpToast();
+                d3.select('#form-btn').attr('aria-label', formHelpMessage);
+                setTimeout(() => {
+                    d3.select('#form-btn').attr('aria-label', null);
+                }, 4500);
+                letterHelpShown = true;
+            }
 
             citiesGroup.classed("faded", true).classed("vanished", true).classed("hide-map", true);
 
@@ -1713,6 +1756,7 @@
         function exitFormMode(onComplete) {
             const finalize = () => {
                 d3.select('#form-btn').text('FORM LETTER');
+                hideFormHelpToast();
 
                 letterParticles = [];
                 if (letterCtx && letterCanvas) {
@@ -1910,10 +1954,14 @@
                 return;
             }
 
-            const dx = p.x - mouseX;
-            const dy = p.y - mouseY;
+            // Use a unified cursor influence centered on the actual pointer
+            const mouseCenterX = mouseX;
+            const mouseCenterY = mouseY;
+
+            const dx = p.x - mouseCenterX;
+            const dy = p.y - mouseCenterY;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            const influenceRadius = Math.max(150, letterStageBounds.width * 0.5);
+            const influenceRadius = Math.max(120, letterStageBounds.width * 0.22);
 
             if (dist < influenceRadius) {
                 const influence = 1 - dist / influenceRadius;
