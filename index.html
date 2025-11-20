@@ -71,9 +71,9 @@
             width: 38px;
             height: 42px;
             flex-shrink: 0;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #888;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #cfd2d8;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
@@ -84,20 +84,21 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(8px);
         }
 
         .letter-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.14);
             border-color: rgba(255, 107, 53, 0.5);
             color: #fff;
             transform: translateY(2px);
         }
 
         .letter-btn.active {
-            background: #ff6b35;
-            border-color: #ff6b35;
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.75), rgba(255, 147, 104, 0.7));
+            border-color: rgba(255, 255, 255, 0.6);
             color: #fff;
-            box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+            box-shadow: 0 0 24px rgba(255, 107, 53, 0.45);
             transform: translateY(2px) scale(1.08);
         }
 
@@ -206,14 +207,15 @@
             width: 34px;
             height: 34px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.08);
             color: #fff;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
         }
 
         #info-toggle .arrow {
@@ -473,13 +475,104 @@
             justify-content: center;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
         }
+
+        #fav-container {
+            position: fixed;
+            right: 18px;
+            bottom: 24px;
+            z-index: 180;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+       #fav-toggle {
+           background: linear-gradient(135deg, rgba(255, 107, 53, 0.7), rgba(255, 147, 104, 0.6));
+           border: 1px solid rgba(255, 255, 255, 0.35);
+           color: #fff;
+           padding: 10px 14px;
+           border-radius: 12px;
+           cursor: pointer;
+           font-weight: 800;
+           font-size: 13px;
+           box-shadow: 0 10px 24px rgba(255, 107, 53, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+           transition: all 0.25s ease;
+           letter-spacing: 0.2px;
+           backdrop-filter: blur(10px);
+       }
+
+        #fav-toggle:hover {
+            background: linear-gradient(135deg, rgba(255, 128, 82, 0.8), rgba(255, 171, 130, 0.72));
+            box-shadow: 0 12px 28px rgba(255, 107, 53, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        }
+
+        #fav-panel {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            padding: 10px 12px;
+            border-radius: 12px;
+            width: 240px;
+            max-height: 220px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        #fav-panel.visible {
+            display: block;
+        }
+
+        .fav-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: background 0.2s ease;
+            color: #fff;
+        }
+
+        .fav-item:last-child {
+            border-bottom: none;
+        }
+
+        .fav-item:hover {
+            background: rgba(255, 107, 53, 0.12);
+        }
+
+        .fav-name {
+            font-weight: 700;
+        }
+
+        .fav-pop {
+            color: rgba(255, 255, 255, 0.75);
+            font-variant-numeric: tabular-nums;
+            font-size: 12px;
+        }
+
+        .favorite-marker {
+            fill: none;
+            stroke: #ff6b35;
+            stroke-width: 2.4px;
+            opacity: 0.95;
+            pointer-events: auto;
+            filter: drop-shadow(0 0 6px rgba(255, 107, 53, 0.9));
+        }
+
+        .favorite-marker.glow {
+            stroke-width: 5px;
+            stroke: rgba(255, 107, 53, 0.35);
+            pointer-events: none;
+        }
     
         #form-btn {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(255, 107, 53, 0.9);
-            border: 2px solid #ff6b35;
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.72), rgba(255, 147, 104, 0.62));
+            border: 1px solid rgba(255, 255, 255, 0.4);
             color: #fff;
             font-size: 16px;
             font-weight: 700;
@@ -490,7 +583,7 @@
             opacity: 0;
             pointer-events: none;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
             white-space: nowrap;
         }
 
@@ -502,7 +595,7 @@
         #form-btn:hover {
             background: #ff8555;
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(255, 107, 53, 0.6);
+            box-shadow: 0 10px 22px rgba(255, 107, 53, 0.55);
         }
 
         #form-btn:active {
@@ -579,6 +672,12 @@
         <div id="form-help-toast" class="form-help-toast"></div>
     
         <button id="form-btn" aria-live="polite">FORM LETTER</button>
+        <div id="fav-container">
+            <button id="fav-toggle">MY FAVORITE NAMES</button>
+            <div id="fav-panel">
+                <div id="fav-list"></div>
+            </div>
+        </div>
         <div id="letter-formation">
             <canvas id="letter-canvas"></canvas>
         </div>
@@ -601,6 +700,18 @@
         };
         const ALPHABET_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         const CITY_DENSE_THRESHOLD = 100;
+        const FAVORITE_CITIES = [
+            { name: 'Truth or Consequences', state: 'NM', pop: 6078 },
+            { name: 'Accident', state: 'MD', pop: 342 },
+            { name: 'Uncertain', state: 'TX', pop: 87 },
+            { name: 'Santa Claus', state: 'IN', pop: 2718 },
+            { name: 'Surprise', state: 'AZ', pop: 141875 },
+            { name: 'Cool', state: 'TX', pop: 144 },
+            { name: 'Carefree', state: 'AZ', pop: 3642 },
+            { name: 'Hooker', state: 'OK', pop: 1554 },
+            { name: 'Peculiar', state: 'MO', pop: 5559 },
+            { name: 'Coolville', state: 'OH', pop: 546 }
+        ];
 
         // ==========================================
         // US CITIES DATA (Curated from Census Gazetteer)
@@ -612,6 +723,8 @@
         let citiesByLetter = {};
         let letterAnimationBuckets = {};
         let currentFilter = null;
+        let cityIndexLookup = null;
+        let favoritesLayer = null;
 
         // Embedded Census data (19,470 incorporated places)
         // Data loaded directly - no external fetch needed!
@@ -861,6 +974,7 @@
         const g = svg.append("g");
         const statesLayer = g.append("g").attr("class", "states");
         citiesGroup = g.append("g").attr("class", "cities");
+        favoritesLayer = g.append("g").attr("class", "favorites");
 
         const projection = d3.geoAlbersUsa()
             .scale(1300)
@@ -1193,10 +1307,17 @@
             cityStore = processed.store;
             citiesByLetter = processed.letterBuckets;
             usCitiesData = processed.allIndexes;
+            cityIndexLookup = new Map();
+            cityStore.names.forEach((name, idx) => {
+                cityIndexLookup.set(`${name}|${cityStore.states[idx]}`, idx);
+            });
             rebuildLetterAnimationBuckets();
 
             // Create alphabet filter
             createAlphabetFilter();
+
+            // Setup favorites UI after store ready
+            setupFavoritesUI();
 
             // Load US map
             const us = await d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json");
@@ -1281,6 +1402,7 @@
         let letterDotTexture = null;
         let letterHelpShown = false;
         let formHelpToastTimeout = null;
+        let favoriteActiveId = null;
 
         function updateLetterStageBounds() {
             letterStageBounds.width = window.innerWidth * LETTER_STAGE_WIDTH_RATIO;
@@ -1589,6 +1711,120 @@
             }
 
             startLetterAnimation();
+        }
+
+        function setupFavoritesUI() {
+            const toggle = d3.select('#fav-toggle');
+            const panel = d3.select('#fav-panel');
+            const list = d3.select('#fav-list');
+
+            resolveFavoriteIndices();
+            renderFavoriteList();
+
+            toggle.on('click', () => {
+                const isOpen = panel.classed('visible');
+                panel.classed('visible', !isOpen);
+                if (!isOpen) {
+                    showFavorites();
+                } else {
+                    hideFavorites();
+                }
+            });
+
+            function resolveFavoriteIndices() {
+                if (!cityIndexLookup || !cityStore) return;
+                FAVORITE_CITIES.forEach(fav => {
+                    const idx = cityIndexLookup.get(`${fav.name}|${fav.state}`) ?? null;
+                    fav.idx = idx;
+                    if (idx !== null) {
+                        fav.pop = cityStore.populations[idx] || fav.pop;
+                    }
+                });
+            }
+
+            function renderFavoriteList() {
+                const rows = list.selectAll('.fav-item')
+                    .data(FAVORITE_CITIES, d => `${d.name}|${d.state}`);
+
+                const enter = rows.enter().append('div')
+                    .attr('class', 'fav-item');
+
+                enter.append('span').attr('class', 'fav-name');
+                enter.append('span').attr('class', 'fav-pop');
+
+                rows.merge(enter).select('.fav-name')
+                    .text(d => `${d.name}, ${d.state}`);
+                rows.merge(enter).select('.fav-pop')
+                    .text(d => (d.pop || 0).toLocaleString());
+
+                rows.exit().remove();
+            }
+
+            function getFavoriteIndexes() {
+                return FAVORITE_CITIES.filter(f => f.idx != null).map(f => f.idx);
+            }
+
+            function showFavorites() {
+                const favIndexes = getFavoriteIndexes();
+                currentFilter = null;
+                d3.selectAll('.letter-btn').classed('active', false);
+                updateInfoPanel(null);
+                applyPerformanceMode(favIndexes.length, null);
+                renderCities(favIndexes);
+                setCityListData(favIndexes);
+                updateFormButton();
+                drawFavoriteMarkers(favIndexes);
+            }
+
+            function hideFavorites() {
+                favoritesLayer.selectAll('.favorite-marker').remove();
+                panel.classed('visible', false);
+                favoriteActiveId = null;
+                renderCities([]);
+                updateInfoPanel(null);
+                setCityListData([]);
+            }
+
+            function drawFavoriteMarkers(indexes) {
+                favoritesLayer.selectAll('.favorite-marker').remove();
+                if (!indexes || !indexes.length) return;
+                const data = indexes.map(idx => ({
+                    cx: cityStore.projectedX[idx],
+                    cy: cityStore.projectedY[idx],
+                    name: cityStore.names[idx],
+                    state: cityStore.states[idx],
+                    pop: cityStore.populations[idx] || 0
+                }));
+
+                // glow rings
+                favoritesLayer.selectAll('.favorite-marker-glow')
+                    .data(data)
+                    .enter()
+                    .append('circle')
+                    .attr('class', 'favorite-marker glow')
+                    .attr('r', 14)
+                    .attr('cx', d => d.cx)
+                    .attr('cy', d => d.cy);
+
+                // core markers with tooltip
+                favoritesLayer.selectAll('.favorite-marker')
+                    .data(data)
+                    .enter()
+                    .append('circle')
+                    .attr('class', 'favorite-marker')
+                    .attr('r', 9)
+                    .attr('cx', d => d.cx)
+                    .attr('cy', d => d.cy)
+                    .on('mouseover', (event, d) => {
+                        tooltip.html(`<strong>${d.name}, ${d.state}</strong><br/><span style="color: ${ORANGE_COLOR};">Population:</span> ${d.pop.toLocaleString()}`)
+                            .style("left", (event.pageX + 15) + "px")
+                            .style("top", (event.pageY - 15) + "px")
+                            .classed("visible", true);
+                    })
+                    .on('mouseout', () => {
+                        tooltip.classed("visible", false);
+                    });
+            }
         }
 
         function buildParticlesForLetter(letter) {
@@ -2011,6 +2247,11 @@
                 letterCtx.fill();
                 letterCtx.globalAlpha = 1;
             }
+        }
+
+        function highlightFavorite(fav) {
+            // kept for potential future use; currently list items are not clickable
+            showFavorites();
         }
 
         // Show/hide form button based on filter
