@@ -579,6 +579,11 @@
             gap: 10px;
         }
 
+        .in-form-mode #fav-container {
+            pointer-events: none;
+            opacity: 0.4;
+        }
+
        #fav-toggle {
            background: linear-gradient(135deg, rgba(255, 107, 53, 0.7), rgba(255, 147, 104, 0.6));
            border: 1px solid rgba(255, 255, 255, 0.35);
@@ -1827,6 +1832,7 @@
             renderFavoriteList();
 
             toggle.on('click', () => {
+                if (formMode) return;
                 const isOpen = panel.classed('visible');
                 panel.classed('visible', !isOpen);
                 if (!isOpen) {
@@ -2065,6 +2071,8 @@
             letterZoomScale = 1;
             applyLetterZoomVisual();
             setLetterCase('uppercase', { force: true });
+
+            d3.select('#fav-panel').classed('visible', false);
 
             d3.select('#letter-formation').classed('active', true);
             d3.select('#container').classed('in-form-mode', true);
